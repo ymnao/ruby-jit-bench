@@ -58,7 +58,7 @@ def extract_fn(output, fn_name)
     end
   end
 
-  result.empty? ? "  (該当関数が見つかりません)\n" : result.join
+  result.empty? ? nil : result.join
 end
 
 failures = []
@@ -90,11 +90,20 @@ SAMPLES.each do |sample|
     next
   end
 
+  before_hir = extract_fn(before, sample[:target])
+  after_hir  = extract_fn(after, sample[:target])
+
+  unless before_hir && after_hir
+    failures << "#{sample[:label]}: fn #{sample[:target]} not found"
+    puts "\n  (該当関数が見つかりません: #{sample[:target]})\n"
+    next
+  end
+
   puts "\n--- 最適化前 HIR ---"
-  puts extract_fn(before, sample[:target])
+  puts before_hir
 
   puts "--- 最適化後 HIR ---"
-  puts extract_fn(after, sample[:target])
+  puts after_hir
 
   puts
 end
