@@ -34,16 +34,20 @@ bench_files.each do |file|
         failures << "#{bench_name} (#{mode})"
         next
       end
+      parsed = false
       out.each_line do |line|
         data = JSON.parse(line) rescue next
+        next unless data.is_a?(Hash) && data["label"].is_a?(String) && !data["label"].empty? && data["time"].is_a?(Numeric)
         runs << data
+        parsed = true
+      end
+      unless parsed
+        warn "\nNO RESULT: #{cmd.join(' ')}"
+        failures << "#{bench_name} (#{mode}): no result"
       end
     end
 
-    if runs.empty?
-      failures << "#{bench_name} (#{mode}): no result"
-      next
-    end
+    next if runs.empty?
 
     sorted = runs.sort_by { |d| d["time"] }
     median = sorted[sorted.size / 2]

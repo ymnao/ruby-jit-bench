@@ -41,18 +41,6 @@ SAMPLES = [
       100.times { succ_chain(0) }
     RUBY
   },
-  {
-    label: "連続ivar代入 (Setivar)",
-    target: "set_value",
-    code: <<~'RUBY',
-      class Obj
-        def initialize; @v = 1; end
-        def set_value; @v = 1; @v = 2; @v = 3; end
-      end
-      o = Obj.new
-      100.times { o.set_value }
-    RUBY
-  },
 ]
 
 def extract_fn(output, fn_name)
