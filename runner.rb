@@ -8,11 +8,13 @@ MODES = {
 }
 
 ITERATIONS = (ENV["BENCH_ITER"] || 5).to_i
+abort "BENCH_ITER must be a positive integer" unless ITERATIONS.positive?
 
 BENCH_DIR = File.join(__dir__, "benchmarks")
 bench_files = Dir.glob("#{BENCH_DIR}/*.rb").sort
 
 results = {}
+failures = []
 total = bench_files.size * MODES.size * ITERATIONS
 count = 0
 
@@ -24,9 +26,11 @@ bench_files.each do |file|
       count += 1
       $stderr.print "\r[%d/%d] %-20s %-8s (%d/%d)" % [count, total, bench_name, mode, i + 1, ITERATIONS]
       cmd = ["ruby", *flags, file]
-      out, status = Open3.capture2(*cmd)
+      out, err, status = Open3.capture3(*cmd)
       unless status.success?
         warn "\nFAILED: #{cmd.join(' ')}"
+        warn "  #{err.lines.first&.chomp}" unless err.empty?
+        failures << "#{bench_name} (#{mode})"
         next
       end
       out.each_line do |line|
@@ -65,4 +69,9 @@ results.each do |label, modes|
   zjit_ratio = vals[2] ? ("%.1fx" % (default_time / vals[2])) : "N/A"
 
   puts "%-20s %s %s %s %9s %9s" % [label, *time_strs, yjit_ratio, zjit_ratio]
+end
+
+unless failures.empty?
+  warn "\nFailed: #{failures.uniq.join(', ')}"
+  exit 1
 end
