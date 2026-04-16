@@ -59,7 +59,7 @@ ruby --zjit --zjit-dump-hir -e "def add(a,b); a+b; end; 100.times{add(1,2)}"
 3. `optimize_getivar` — ivar読み込みの最適化
 4. `optimize_c_calls` — Cメソッド呼び出しの最適化
 5. `convert_no_profile_sends` — プロファイルなし送信の変換
-6. `optimize_load_store` — 冗長なLoadField/StoreFieldの除去
+6. `optimize_load_store` — 冗長なLoadFieldの除去
 7. `fold_constants` — 定数畳み込み
 8. `clean_cfg` — 制御フローグラフの整理
 9. `remove_redundant_patch_points` — 冗長なパッチポイントの除去
@@ -73,7 +73,7 @@ ruby --zjit --zjit-dump-hir -e "def add(a,b); a+b; end; 100.times{add(1,2)}"
 Ruby 4.0.2 時点では ZJIT の多くの最適化が未搭載。**Ruby HEAD からビルドすることを強く推奨**。
 
 master にのみ存在する主要最適化:
-- load-store最適化（冗長な LoadField/StoreField の除去）
+- load-store最適化（冗長な LoadField の除去）
 - Lightweight Frames（JIT-to-JIT呼び出しで最大4.9%高速化）
 - ポリモーフィック getivar
 - no-profile send 再コンパイル
