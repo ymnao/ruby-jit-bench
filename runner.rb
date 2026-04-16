@@ -7,8 +7,9 @@ MODES = {
   "ZJIT"    => ["--zjit"],
 }
 
-ITERATIONS = (ENV["BENCH_ITER"] || 5).to_i
-abort "BENCH_ITER must be a positive integer" unless ITERATIONS.positive?
+iter_str = ENV["BENCH_ITER"] || "5"
+abort "BENCH_ITER must be a positive integer: #{iter_str}" unless iter_str.match?(/\A[1-9]\d*\z/)
+ITERATIONS = iter_str.to_i
 
 BENCH_DIR = File.join(__dir__, "benchmarks")
 bench_files = Dir.glob("#{BENCH_DIR}/*.rb").sort
@@ -39,7 +40,10 @@ bench_files.each do |file|
       end
     end
 
-    next if runs.empty?
+    if runs.empty?
+      failures << "#{bench_name} (#{mode}): no result"
+      next
+    end
 
     sorted = runs.sort_by { |d| d["time"] }
     median = sorted[sorted.size / 2]
