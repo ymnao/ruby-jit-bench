@@ -36,8 +36,8 @@ BENCH_ITER=3 make bench
 
 | ファイル | 何を測るか | ZJITの最適化 | 備考 |
 |---|---|---|---|
-| ivar_heavy.rb | ivar冗長読み出し | load-store最適化（冗長LoadField除去） | masterで効果大 |
-| setivar.rb | ivar連続代入 | load-store最適化（冗長StoreField除去） | masterで YJIT の2.5倍高速 |
+| ivar_heavy.rb | ivar冗長読み出し | load-store 最適化（冗長 LoadField 除去） | Ruby HEAD で効果大 |
+| setivar.rb | ivar連続代入 | Dead Store Elimination（[PR #16507](https://github.com/ruby/ruby/pull/16507)、開発中） | [Rails at Scale 記事](https://railsatscale.com/2026-03-18-how-zjit-removes-redundant-object-loads-and-stores/)では ZJIT 2ms vs YJIT 5ms（当時の Ruby HEAD 依存、現ビルドでは再現しない場合あり） |
 | constant_fold.rb | 定数畳み込み・DCE | fold_constants + eliminate_dead_code | SSA-IRでデータフロー解析 |
 | frozen_const.rb | frozenオブジェクトのivar読み | frozen LoadField → Const 変換 | コンパイル時に値確定 |
 | c_method_inline.rb | Cメソッドインライン化 | Integer#succ → FixnumAdd命令 | 後続の最適化パスと連鎖 |
@@ -59,7 +59,7 @@ ruby --zjit --zjit-dump-hir -e "def add(a,b); a+b; end; 100.times{add(1,2)}"
 3. `optimize_getivar` — ivar読み込みの最適化
 4. `optimize_c_calls` — Cメソッド呼び出しの最適化
 5. `convert_no_profile_sends` — プロファイルなし送信の変換
-6. `optimize_load_store` — 冗長なLoadField/StoreFieldの除去
+6. `optimize_load_store` — 冗長な LoadField の除去
 7. `fold_constants` — 定数畳み込み
 8. `clean_cfg` — 制御フローグラフの整理
 9. `remove_redundant_patch_points` — 冗長なパッチポイントの除去
@@ -72,8 +72,8 @@ ruby --zjit --zjit-dump-hir -e "def add(a,b); a+b; end; 100.times{add(1,2)}"
 
 Ruby 4.0.2 時点では ZJIT の多くの最適化が未搭載。**Ruby HEAD からビルドすることを強く推奨**。
 
-master にのみ存在する主要最適化:
-- load-store最適化（setivar で YJIT の2.5倍高速）
+Ruby HEAD（ruby/ruby master）にのみ存在する主要最適化:
+- load-store 最適化（冗長な LoadField の除去）
 - Lightweight Frames（JIT-to-JIT呼び出しで最大4.9%高速化）
 - ポリモーフィック getivar
 - no-profile send 再コンパイル
@@ -85,7 +85,7 @@ rbenv install ruby-dev
 rbenv local ruby-dev
 ```
 
-### Iongraph 可視化（master のみ）
+### Iongraph 可視化（Ruby HEAD のみ）
 
 ```sh
 ruby --zjit --zjit-dump-hir-iongraph script.rb
@@ -96,8 +96,8 @@ ruby --zjit --zjit-dump-hir-iongraph script.rb
 ## 補足
 
 - Ruby 4.0.2 時点では多くのベンチマークで YJIT が優勢。ZJIT の load-store 最適化や DCE はまだ発展途上
-- Rails at Scale の [setivar ベンチマーク](https://railsatscale.com/2026-03-18-how-zjit-removes-redundant-object-loads-and-stores/) では ZJIT 2ms vs YJIT 5ms という結果が報告（master）
-- 再帰 fib30 では [ZJIT が YJIT より約60%高速](https://rubykaigi.org/2025/presentations/maximecb.html) という報告あり（RubyKaigi 2025 発表より）
+- Rails at Scale の [setivar ベンチマーク](https://railsatscale.com/2026-03-18-how-zjit-removes-redundant-object-loads-and-stores/) では ZJIT 2ms vs YJIT 5ms という結果が報告されている（2026年3月時点の Ruby HEAD。ビルドにより結果は異なる）
+- 再帰 fib30 では [ZJIT が YJIT より約60%高速](https://rubykaigi.org/2025/presentations/maximecb.html) という報告あり（RubyKaigi 2025 発表時点。現ビルドでは再現しない場合がある）
 - エスケープ解析+スカラー置換（[PR #16096](https://github.com/ruby/ruby/pull/16096)、クローズ済み）、Dead Store Elimination（[PR #16507](https://github.com/ruby/ruby/pull/16507)）が開発中
 
 ## 環境
