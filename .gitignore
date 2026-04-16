@@ -1,5 +1,9 @@
-# Generated files
-.stats_workload.rb
+# macOS
+.DS_Store
+
+# Environment
+.env
+.env.*
 
 # Ruby
 *.gem

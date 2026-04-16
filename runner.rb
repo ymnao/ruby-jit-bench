@@ -7,28 +7,59 @@ MODES = {
   "ZJIT"    => ["--zjit"],
 }
 
+iter_str = ENV["BENCH_ITER"] || "5"
+abort "BENCH_ITER must be a positive integer: #{iter_str}" unless iter_str.match?(/\A[1-9]\d*\z/)
+ITERATIONS = iter_str.to_i
+
 BENCH_DIR = File.join(__dir__, "benchmarks")
 bench_files = Dir.glob("#{BENCH_DIR}/*.rb").sort
 
 results = {}
+failures = []
+total = bench_files.size * MODES.size * ITERATIONS
+count = 0
 
 bench_files.each do |file|
+  bench_name = File.basename(file, ".rb")
   MODES.each do |mode, flags|
-    cmd = ["ruby", *flags, file]
-    out, status = Open3.capture2(*cmd)
-    unless status.success?
-      warn "FAILED: #{cmd.join(' ')}"
-      next
+    runs = []
+    ITERATIONS.times do |i|
+      count += 1
+      $stderr.print "\r[%d/%d] %-20s %-8s (%d/%d)" % [count, total, bench_name, mode, i + 1, ITERATIONS]
+      cmd = ["ruby", *flags, file]
+      out, err, status = Open3.capture3(*cmd)
+      unless status.success?
+        warn "\nFAILED: #{cmd.join(' ')}"
+        warn "  #{err.lines.first&.chomp}" unless err.empty?
+        failures << "#{bench_name} (#{mode})"
+        next
+      end
+      parsed = false
+      out.each_line do |line|
+        data = JSON.parse(line) rescue next
+        next unless data.is_a?(Hash) && data["label"].is_a?(String) && !data["label"].empty? && data["time"].is_a?(Numeric)
+        runs << data
+        parsed = true
+      end
+      unless parsed
+        warn "\nNO RESULT: #{cmd.join(' ')}"
+        failures << "#{bench_name} (#{mode}): no result"
+      end
     end
-    out.each_line do |line|
-      data = JSON.parse(line) rescue next
-      results[data["label"]] ||= {}
-      results[data["label"]][mode] = data
-    end
+
+    next if runs.empty?
+
+    sorted = runs.sort_by { |d| d["time"] }
+    median = sorted[sorted.size / 2]
+    results[median["label"]] ||= {}
+    results[median["label"]][mode] = median
   end
 end
 
+$stderr.puts "\n"
+
 puts "=== Ruby JIT Benchmark (#{RUBY_DESCRIPTION}) ==="
+puts "(#{ITERATIONS} runs, median)"
 puts
 
 header = "%-20s %10s %10s %10s %9s %9s" % ["Benchmark", "default", "YJIT", "ZJIT", "YJIT vs", "ZJIT vs"]
@@ -46,4 +77,9 @@ results.each do |label, modes|
   zjit_ratio = vals[2] ? ("%.1fx" % (default_time / vals[2])) : "N/A"
 
   puts "%-20s %s %s %s %9s %9s" % [label, *time_strs, yjit_ratio, zjit_ratio]
+end
+
+unless failures.empty?
+  warn "\nFailed: #{failures.uniq.join(', ')}"
+  exit 1
 end

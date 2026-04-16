@@ -1,3 +1,5 @@
+.PHONY: all bench stats hir full
+
 all: bench stats
 
 bench:

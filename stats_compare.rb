@@ -2,8 +2,6 @@ require "json"
 require "open3"
 
 WORKLOAD = <<~'RUBY'
-  require_relative "lib/bench_helper"
-
   class Counter
     def initialize = @x = 0
     def step = @x = @x + 1
@@ -21,9 +19,6 @@ WORKLOAD = <<~'RUBY'
     counter.step
   end
 RUBY
-
-WORKLOAD_FILE = File.join(__dir__, ".stats_workload.rb")
-File.write(WORKLOAD_FILE, WORKLOAD)
 
 yjit_script = <<~RUBY
   #{WORKLOAD}
@@ -61,8 +56,6 @@ end
 
 yjit = run_stats("YJIT", yjit_script, ["--yjit", "--yjit-stats"])
 zjit = run_stats("ZJIT", zjit_script, ["--zjit", "--zjit-stats"])
-
-File.delete(WORKLOAD_FILE) if File.exist?(WORKLOAD_FILE)
 
 exit 1 unless yjit && zjit
 

@@ -41,18 +41,6 @@ SAMPLES = [
       100.times { succ_chain(0) }
     RUBY
   },
-  {
-    label: "連続ivar代入 (Setivar)",
-    target: "set_value",
-    code: <<~'RUBY',
-      class Obj
-        def initialize; @v = 1; end
-        def set_value; @v = 1; @v = 2; @v = 3; end
-      end
-      o = Obj.new
-      100.times { o.set_value }
-    RUBY
-  },
 ]
 
 def extract_fn(output, fn_name)
@@ -70,11 +58,18 @@ def extract_fn(output, fn_name)
     end
   end
 
-  result.empty? ? "  (該当関数が見つかりません)\n" : result.join
+  result.empty? ? nil : result.join
 end
 
+failures = []
+
 def run_zjit(code, *flags)
-  out, err, = Open3.capture3("ruby", "--zjit", *flags, "-e", code)
+  out, err, status = Open3.capture3("ruby", "--zjit", *flags, "-e", code)
+  unless status.success?
+    warn "FAILED: ruby --zjit #{flags.join(' ')} -e ..."
+    warn "  #{err.lines.first&.chomp}" unless err.empty?
+    return nil
+  end
   out + "\n" + err
 end
 
@@ -89,11 +84,31 @@ SAMPLES.each do |sample|
   before = run_zjit(sample[:code], "--zjit-dump-hir-init")
   after  = run_zjit(sample[:code], "--zjit-dump-hir")
 
+  unless before && after
+    failures << sample[:label]
+    puts "\n  (ZJIT 実行に失敗しました)\n"
+    next
+  end
+
+  before_hir = extract_fn(before, sample[:target])
+  after_hir  = extract_fn(after, sample[:target])
+
+  unless before_hir && after_hir
+    failures << "#{sample[:label]}: fn #{sample[:target]} not found"
+    puts "\n  (該当関数が見つかりません: #{sample[:target]})\n"
+    next
+  end
+
   puts "\n--- 最適化前 HIR ---"
-  puts extract_fn(before, sample[:target])
+  puts before_hir
 
   puts "--- 最適化後 HIR ---"
-  puts extract_fn(after, sample[:target])
+  puts after_hir
 
   puts
+end
+
+unless failures.empty?
+  warn "\nFailed: #{failures.join(', ')}"
+  exit 1
 end

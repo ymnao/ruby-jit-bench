@@ -13,10 +13,13 @@ RubyKaigi 2026 LT「RubyのJITはテスト勉強に似ている」実証実験�
 
 ```sh
 make all          # 全ベンチマーク + コンパイル統計
-make bench        # 速度比較のみ
+make bench        # 速度比較のみ（5回計測の中央値）
 make stats        # コンパイル統計のみ
 make hir          # ZJIT HIR 最適化前後の比較
 make full         # bench + stats + hir すべて
+
+# 計測回数を変更する場合
+BENCH_ITER=3 make bench
 ```
 
 ## ベンチマーク一覧
@@ -55,11 +58,13 @@ ruby --zjit --zjit-dump-hir -e "def add(a,b); a+b; end; 100.times{add(1,2)}"
 2. `inline` — 軽量メソッドのインライン化
 3. `optimize_getivar` — ivar読み込みの最適化
 4. `optimize_c_calls` — Cメソッド呼び出しの最適化
-5. `optimize_load_store` — 冗長なLoadField/StoreFieldの除去
-6. `fold_constants` — 定数畳み込み
-7. `clean_cfg` — 制御フローグラフの整理
-8. `remove_redundant_patch_points` — 冗長なパッチポイントの除去
-9. `eliminate_dead_code` — デッドコード除去
+5. `convert_no_profile_sends` — プロファイルなし送信の変換
+6. `optimize_load_store` — 冗長なLoadField/StoreFieldの除去
+7. `fold_constants` — 定数畳み込み
+8. `clean_cfg` — 制御フローグラフの整理
+9. `remove_redundant_patch_points` — 冗長なパッチポイントの除去
+10. `remove_duplicate_check_interrupts` — 重複割り込みチェックの除去
+11. `eliminate_dead_code` — デッドコード除去
 
 これが「教科書全理解勢」のアプローチ。YJIT（LBBV）にはこのようなパイプラインがなく、基本ブロック単位で型特化コードを直接生成する。
 
@@ -92,8 +97,8 @@ ruby --zjit --zjit-dump-hir-iongraph script.rb
 
 - Ruby 4.0.2 時点では多くのベンチマークで YJIT が優勢。ZJIT の load-store 最適化や DCE はまだ発展途上
 - Rails at Scale の [setivar ベンチマーク](https://railsatscale.com/2026-03-18-how-zjit-removes-redundant-object-loads-and-stores/) では ZJIT 2ms vs YJIT 5ms という結果が報告（master）
-- 再帰 fib30 では [ZJIT が YJIT より約60%高速](https://railsatscale.com/2025-12-24-launch-zjit/) という報告あり
-- エスケープ解析+スカラー置換（[PR #16096](https://github.com/ruby/ruby/pull/16096)）、Dead Store Elimination（[PR #16507](https://github.com/ruby/ruby/pull/16507)）が開発中
+- 再帰 fib30 では [ZJIT が YJIT より約60%高速](https://rubykaigi.org/2025/presentations/maximecb.html) という報告あり（RubyKaigi 2025 発表より）
+- エスケープ解析+スカラー置換（[PR #16096](https://github.com/ruby/ruby/pull/16096)、クローズ済み）、Dead Store Elimination（[PR #16507](https://github.com/ruby/ruby/pull/16507)）が開発中
 
 ## 環境
 
@@ -103,7 +108,7 @@ ruby --zjit --zjit-dump-hir-iongraph script.rb
 
 ## 参考
 
-- [YJIT 公式ドキュメント](https://docs.ruby-lang.org/en/master/yjit/yjit_md.html)
+- [YJIT 公式ドキュメント](https://docs.ruby-lang.org/en/master/jit/yjit_md.html)
 - [ZJIT 公式ドキュメント](https://docs.ruby-lang.org/en/4.0/jit/zjit_md.html)
 - [Rails at Scale: ZJIT Load-Store 最適化](https://railsatscale.com/2026-03-18-how-zjit-removes-redundant-object-loads-and-stores/)
 - [Rails at Scale: Launch ZJIT](https://railsatscale.com/2025-12-24-launch-zjit/)

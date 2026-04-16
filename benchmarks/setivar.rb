@@ -2,7 +2,7 @@ require_relative "../lib/bench_helper"
 
 class Obj
   def initialize
-    @v0 = 1; @v1 = 2; @v3 = 3; @levar = 1
+    @v0 = 1; @v1 = 2; @v2 = 3; @levar = 1
   end
 
   def set_value_loop
