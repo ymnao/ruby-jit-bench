@@ -61,8 +61,15 @@ def extract_fn(output, fn_name)
   result.empty? ? "  (該当関数が見つかりません)\n" : result.join
 end
 
+failures = []
+
 def run_zjit(code, *flags)
-  out, err, = Open3.capture3("ruby", "--zjit", *flags, "-e", code)
+  out, err, status = Open3.capture3("ruby", "--zjit", *flags, "-e", code)
+  unless status.success?
+    warn "FAILED: ruby --zjit #{flags.join(' ')} -e ..."
+    warn "  #{err.lines.first&.chomp}" unless err.empty?
+    return nil
+  end
   out + "\n" + err
 end
 
@@ -77,6 +84,12 @@ SAMPLES.each do |sample|
   before = run_zjit(sample[:code], "--zjit-dump-hir-init")
   after  = run_zjit(sample[:code], "--zjit-dump-hir")
 
+  unless before && after
+    failures << sample[:label]
+    puts "\n  (ZJIT 実行に失敗しました)\n"
+    next
+  end
+
   puts "\n--- 最適化前 HIR ---"
   puts extract_fn(before, sample[:target])
 
@@ -84,4 +97,9 @@ SAMPLES.each do |sample|
   puts extract_fn(after, sample[:target])
 
   puts
+end
+
+unless failures.empty?
+  warn "\nFailed: #{failures.join(', ')}"
+  exit 1
 end
