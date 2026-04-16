@@ -36,8 +36,8 @@ BENCH_ITER=3 make bench
 
 | ファイル | 何を測るか | ZJITの最適化 | 備考 |
 |---|---|---|---|
-| ivar_heavy.rb | ivar冗長読み出し | load-store最適化（冗長 LoadField 除去） | Ruby HEAD で効果大 |
-| setivar.rb | ivar連続代入 | Dead Store Elimination（[PR #16507](https://github.com/ruby/ruby/pull/16507)、開発中） | [Rails at Scale記事](https://railsatscale.com/2026-03-18-how-zjit-removes-redundant-object-loads-and-stores/)では ZJIT 2ms vs YJIT 5ms |
+| ivar_heavy.rb | ivar冗長読み出し | load-store 最適化（冗長 LoadField 除去） | Ruby HEAD で効果大 |
+| setivar.rb | ivar連続代入 | Dead Store Elimination（[PR #16507](https://github.com/ruby/ruby/pull/16507)、開発中） | [Rails at Scale 記事](https://railsatscale.com/2026-03-18-how-zjit-removes-redundant-object-loads-and-stores/)では ZJIT 2ms vs YJIT 5ms（当時の Ruby HEAD 依存、現ビルドでは再現しない場合あり） |
 | constant_fold.rb | 定数畳み込み・DCE | fold_constants + eliminate_dead_code | SSA-IRでデータフロー解析 |
 | frozen_const.rb | frozenオブジェクトのivar読み | frozen LoadField → Const 変換 | コンパイル時に値確定 |
 | c_method_inline.rb | Cメソッドインライン化 | Integer#succ → FixnumAdd命令 | 後続の最適化パスと連鎖 |
