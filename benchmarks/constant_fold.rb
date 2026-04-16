@@ -10,4 +10,4 @@ def compute_heavy(x)
   x + d
 end
 
-run_bench("Constant fold", n: 5_000_000) { compute_heavy(42) }
+run_bench("Constant fold+DCE", n: 5_000_000) { compute_heavy(42) }

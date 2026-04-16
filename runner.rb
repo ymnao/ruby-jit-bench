@@ -7,28 +7,47 @@ MODES = {
   "ZJIT"    => ["--zjit"],
 }
 
+ITERATIONS = (ENV["BENCH_ITER"] || 5).to_i
+
 BENCH_DIR = File.join(__dir__, "benchmarks")
 bench_files = Dir.glob("#{BENCH_DIR}/*.rb").sort
 
 results = {}
+total = bench_files.size * MODES.size * ITERATIONS
+count = 0
 
 bench_files.each do |file|
+  bench_name = File.basename(file, ".rb")
   MODES.each do |mode, flags|
-    cmd = ["ruby", *flags, file]
-    out, status = Open3.capture2(*cmd)
-    unless status.success?
-      warn "FAILED: #{cmd.join(' ')}"
-      next
+    runs = []
+    ITERATIONS.times do |i|
+      count += 1
+      $stderr.print "\r[%d/%d] %-20s %-8s (%d/%d)" % [count, total, bench_name, mode, i + 1, ITERATIONS]
+      cmd = ["ruby", *flags, file]
+      out, status = Open3.capture2(*cmd)
+      unless status.success?
+        warn "\nFAILED: #{cmd.join(' ')}"
+        next
+      end
+      out.each_line do |line|
+        data = JSON.parse(line) rescue next
+        runs << data
+      end
     end
-    out.each_line do |line|
-      data = JSON.parse(line) rescue next
-      results[data["label"]] ||= {}
-      results[data["label"]][mode] = data
-    end
+
+    next if runs.empty?
+
+    sorted = runs.sort_by { |d| d["time"] }
+    median = sorted[sorted.size / 2]
+    results[median["label"]] ||= {}
+    results[median["label"]][mode] = median
   end
 end
 
+$stderr.puts "\n"
+
 puts "=== Ruby JIT Benchmark (#{RUBY_DESCRIPTION}) ==="
+puts "(#{ITERATIONS} runs, median)"
 puts
 
 header = "%-20s %10s %10s %10s %9s %9s" % ["Benchmark", "default", "YJIT", "ZJIT", "YJIT vs", "ZJIT vs"]
